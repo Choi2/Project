@@ -1,13 +1,21 @@
 //책상 위
-const int buttonPin = 2;
-const int ledPin = 3;
+#define trigPin1 9
+#define trigPin2 11
+#define trigPin3 6
+#define trigPin4 5
+#define echoPin1 8
+#define echoPin2 12
+#define echoPin3 7
+#define echoPin4 4
+#define buttonPin 2
+#define ledPin 3
+#define error 10//허용오차범위(cm)
+#define limit 1000//센싱 한계 표시
 int ledState = HIGH;
 int buttonState;
 int lastButtonState = LOW;
 long lastDebounceTime = 0;
 long debounceDelay = 50;
-int trigPin1 = 9, trigPin2 = 11, trigPin3 = 6, trigPin4 = 5;
-int echoPin1 = 8, echoPin2 = 12, echoPin3 = 7, echoPin4 = 4;
 
 void setup()
 {
@@ -27,10 +35,13 @@ void setup()
 
 void loop()
 {
-  int i, a, b, person;
-  long duration1, duration2, duration3, duration4, distance1, distance2, distance3, distance4, sum1 = 0, sum2 = 0, sum3 = 0, sum4 = 0, avr1, avr2, avr3, avr4, start = 0, check1, check2, check3, check4;
-  long temp1[10] = {0}, temp2[10] = {0}, temp3[10] = {0}, temp4[10] = {0};
+  int a, b, i;
+  int person;//사람 유무 판별 변수
+  int start = 0, check1, check2, check3, check4;//초기값(기준값) 변수와 비교값 변수
+  long duration1, duration2, duration3, duration4, distance1, distance2, distance3, distance4, sum1 = 0, sum2 = 0, sum3 = 0, sum4 = 0, avr1, avr2, avr3, avr4;
+  long temp1[10] = {0}, temp2[10] = {0}, temp3[10] = {0}, temp4[10] = {0};//센싱한 치수들의 평균을 내기위한 변수
   int reading = digitalRead(buttonPin);
+  //////////////버튼 스위치의 토글스위치화//////////
   if (reading != lastButtonState) {
     lastDebounceTime = millis();
   }
@@ -44,6 +55,7 @@ void loop()
   }
   digitalWrite(ledPin, ledState);
   lastButtonState = reading;
+  ///////////초음파 센서를 통한 거리측정///////////
   for (i = 0; i < 10; i++) {
     digitalWrite(trigPin1, LOW);
     delayMicroseconds(2000);
@@ -70,40 +82,40 @@ void loop()
     delayMicroseconds(1000);
     digitalWrite(trigPin4, LOW);
     duration4 = pulseIn(echoPin4, HIGH);
-    
+
     distance1 = duration1 * 17 / 1000;
     distance2 = duration2 * 17 / 1000;
     distance3 = duration3 * 17 / 1000;
     distance4 = duration4 * 17 / 1000;
-    
+
     temp1[i] = {distance1};
     temp2[i] = {distance2};
     temp3[i] = {distance3};
     temp4[i] = {distance4};
-    
+
     //Serial.println(distance1);
     //Serial.println(distance2);
-    
+    /////////////센싱된 값들의 안정화_ 불안정한 값이 입력될경우 초기화///////////
     delay(1);
-    if (temp1[i] >= 1000) {
+    if (temp1[i] >= limit) {
       i = -1;
       for (a = 0; a < 10; a++)
         temp1[a] = {0};
     }
     delay(1);
-    if (temp2[i] >= 1000) {
+    if (temp2[i] >= limit) {
       i = -1;
       for (a = 0; a < 10; a++)
         temp2[a] = {0};
     }
     delay(1);
-    if (temp3[i] >= 1000) {
+    if (temp3[i] >= limit) {
       i = -1;
       for (a = 0; a < 10; a++)
         temp3[a] = {0};
     }
     delay(1);
-    if (temp4[i] >= 1000) {
+    if (temp4[i] >= limit) {
       i = -1;
       for (a = 0; a < 10; a++)
         temp4[a] = {0};
@@ -111,6 +123,7 @@ void loop()
     delay(1);
     //Serial.println(i);
   }
+  /////////////////각 센서에서 센싱한 값들의 합////////////
   for (i = 0; i < 10; i++) {
     sum1 = sum1 + temp1[i];
     sum2 = sum2 + temp2[i];
@@ -118,6 +131,7 @@ void loop()
     sum4 = sum4 + temp4[i];
   }
   //Serial.println(sum);
+  ///////////////각 센서에서 센싱한 값들의 평균//////////
   avr1 = (sum1 / 10);
   avr2 = (sum2 / 10);
   avr3 = (sum3 / 10);
@@ -129,14 +143,17 @@ void loop()
   Serial.print(avr3);
   Serial.print(" ");
   Serial.println(avr4);
-  if (ledState == HIGH) 
-  start = avr1;//초기값은 하나로 측정해서 변수하나에 넣어도 충분(일렬로 나열되어있기때문에)
+  /////////////LED가 켜져있을 경우_평균이 초기값 변수에 입력////////////////
+  if (ledState == HIGH)
+    start = avr1;//초기값은 하나로 측정해서 변수하나에 넣어도 충분(일렬로 나열되어있기때문에)
+  ///////////LED가 꺼져있을 경우_평균이 비교값 변수에 입력////////////////
   else if (ledState == LOW) {
     check1 = avr1;
     check2 = avr2;
     check3 = avr3;
     check4 = avr4;
-    if (check1 <= (start - 10) || check2 <= (start - 10) || check3 <= (start - 10) || check4 <= (start - 10) ) {
+    /////////////비교값이 초기값 범위(오차포함)안에 있을경우 사람이 있는걸로 판별/////////////////
+    if (check1 <= (start - error) || check2 <= (start - error) || check3 <= (start - error) || check4 <= (start - error) ) {
       person = 1; //사람 유
     }
     else {
