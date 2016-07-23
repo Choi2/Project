@@ -41,7 +41,6 @@ void loop()
   int person;//사람 유무 판별 변수
   int start = 0, check1, check2, check3, check4;//초기값(기준값) 변수와 비교값 변수
   long duration1, duration2, duration3, duration4, distance1, distance2, distance3, distance4, sum1 = 0, sum2 = 0, sum3 = 0, sum4 = 0, avr1, avr2, avr3, avr4;
-  long temp1[10] = {0}, temp2[10] = {0}, temp3[10] = {0}, temp4[10] = {0};//센싱한 치수들의 평균을 내기위한 변수
   int reading = digitalRead(buttonPin);
   //////////////버튼 스위치의 토글스위치화//////////
   if (reading != lastButtonState) {
@@ -90,47 +89,52 @@ void loop()
     distance3 = duration3 * 17 / 1000;
     distance4 = duration4 * 17 / 1000;
 
-    temp1[i] = {distance1};
-    temp2[i] = {distance2};
-    temp3[i] = {distance3};
-    temp4[i] = {distance4};
-
     //Serial.println(distance1);
     //Serial.println(distance2);
     /////////////센싱된 값들의 안정화_ 불안정한 값이 입력될경우 초기화///////////
     delay(1);
-    if (temp1[i] >= limit) {
+    if (distance1 >= limit) {
       i = -1;
-      for (a = 0; a < 10; a++)
-        temp1[a] = {0};
+      sum1 = 0;
+      sum2 = 0;
+      sum3 = 0;
+      sum4 = 0;
+      continue;
     }
     delay(1);
-    if (temp2[i] >= limit) {
+    if (distance2 >= limit) {
       i = -1;
-      for (a = 0; a < 10; a++)
-        temp2[a] = {0};
+      sum1 = 0;
+      sum2 = 0;
+      sum3 = 0;
+      sum4 = 0;
+      continue;
     }
     delay(1);
-    if (temp3[i] >= limit) {
+    if (distance3 >= limit) {
       i = -1;
-      for (a = 0; a < 10; a++)
-        temp3[a] = {0};
+      sum1 = 0;
+      sum2 = 0;
+      sum3 = 0;
+      sum4 = 0;
+      continue;
     }
     delay(1);
-    if (temp4[i] >= limit) {
+    if (distance4 >= limit) {
       i = -1;
-      for (a = 0; a < 10; a++)
-        temp4[a] = {0};
+      sum1 = 0;
+      sum2 = 0;
+      sum3 = 0;
+      sum4 = 0;
+      continue;
     }
     delay(1);
+
+    sum1 = sum1 + distance1;
+    sum2 = sum2 + distance2;
+    sum3 = sum3 + distance3;
+    sum4 = sum4 + distance4;
     //Serial.println(i);
-  }
-  /////////////////각 센서에서 센싱한 값들의 합////////////
-  for (i = 0; i < 10; i++) {
-    sum1 = sum1 + temp1[i];
-    sum2 = sum2 + temp2[i];
-    sum3 = sum3 + temp3[i];
-    sum4 = sum4 + temp4[i];
   }
   //Serial.println(sum);
   ///////////////각 센서에서 센싱한 값들의 평균//////////
