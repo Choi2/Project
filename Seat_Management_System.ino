@@ -10,10 +10,8 @@
 #define buttonPin 2
 #define ledPin 3
 #define error 10//허용오차범위(cm)
-#define limit 1000//센싱 한계 표시(cm)
-#define trigoffdelay 20000//trig off시간
-#define trigondelay 10000//tring on 시간
-int ledState = LOW;//LED초기상태 : ON
+#define limit 1000//센싱 한계 표시
+int ledState = HIGH;
 int buttonState;
 int lastButtonState = LOW;
 long lastDebounceTime = 0;
@@ -60,28 +58,28 @@ void loop()
   ///////////초음파 센서를 통한 거리측정///////////
   for (i = 0; i < 10; i++) {
     digitalWrite(trigPin1, LOW);
-    delayMicroseconds(trigoffdelay);
+    delayMicroseconds(2000);
     digitalWrite(trigPin1, HIGH);
-    delayMicroseconds(trigondelay);
+    delayMicroseconds(1000);
     digitalWrite(trigPin1, LOW);
     duration1 = pulseIn(echoPin1, HIGH);
     digitalWrite(trigPin2, LOW);
-    delayMicroseconds(trigoffdelay);
+    delayMicroseconds(2000);
     digitalWrite(trigPin2, HIGH);
-    delayMicroseconds(trigondelay);
+    delayMicroseconds(1000);
     digitalWrite(trigPin2, LOW);
     duration2 = pulseIn(echoPin2, HIGH);
     // 밑에 2개더 추가분 소스
     digitalWrite(trigPin3, LOW);
-    delayMicroseconds(trigoffdelay);
+    delayMicroseconds(2000);
     digitalWrite(trigPin3, HIGH);
-    delayMicroseconds(trigondelay);
+    delayMicroseconds(1000);
     digitalWrite(trigPin3, LOW);
     duration3 = pulseIn(echoPin3, HIGH);
     digitalWrite(trigPin4, LOW);
-    delayMicroseconds(trigoffdelay);
+    delayMicroseconds(2000);
     digitalWrite(trigPin4, HIGH);
-    delayMicroseconds(trigondelay);
+    delayMicroseconds(1000);
     digitalWrite(trigPin4, LOW);
     duration4 = pulseIn(echoPin4, HIGH);
 
@@ -146,10 +144,10 @@ void loop()
   Serial.print(" ");
   Serial.println(avr4);
   /////////////LED가 켜져있을 경우_평균이 초기값 변수에 입력////////////////
-  if (ledState == LOW)
+  if (ledState == HIGH)
     start = avr1;//초기값은 하나로 측정해서 변수하나에 넣어도 충분(일렬로 나열되어있기때문에)
   ///////////LED가 꺼져있을 경우_평균이 비교값 변수에 입력////////////////
-  else if (ledState == HIGH) {
+  else if (ledState == LOW) {
     check1 = avr1;
     check2 = avr2;
     check3 = avr3;
