@@ -9,7 +9,7 @@
 #define buttonPin 2
 #define ledPin 3
 #define error 10
-#define limit 1000
+#define limit 400
 #define trigoffdelay 20000
 #define trigondelay 10000
 
