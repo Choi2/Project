@@ -1,23 +1,24 @@
 //책상 위
-#define trigPin1 9
-#define trigPin2 11
-#define trigPin3 6
-#define trigPin4 5
-#define echoPin1 8
-#define echoPin2 12
-#define echoPin3 7
-#define echoPin4 4
-#define buttonPin 2
-#define ledPin 3
+#define trigPin1 7
+#define trigPin2 9
+#define trigPin3 11
+#define trigPin4 13
+#define echoPin1 6
+#define echoPin2 8
+#define echoPin3 10
+#define echoPin4 12
+#define buttonPin 4
+#define ledPin 5
 #define error 10//허용오차범위(cm)
 #define limit 1000//센싱 한계 표시(cm)
-#define trigoffdelay 20000//trig off시간
-#define trigondelay 10000//tring on 시간
-int ledState = LOW;//LED초기상태 : ON
+#define trigoffdelay 200000//trig off시간
+#define trigondelay 100000//tring on 시간
+int ledState = HIGH;//LED초기상태 : ON
 int buttonState;
 int lastButtonState = LOW;
 long lastDebounceTime = 0;
 long debounceDelay = 50;
+int reading = 0;
 
 void setup()
 {
@@ -40,23 +41,11 @@ void loop()
   int person;//사람 유무 판별 변수
   long start = 0, check[4] = {0};//초기값(기준값) 변수와 비교값 변수
   long duration[4] = {0}, distance[4] = {0}, sum[4] = {0}, avr[4] = {0};
-  int reading = digitalRead(buttonPin);
-  //////////////버튼 스위치의 토글스위치화//////////
-  if (reading != lastButtonState) {
-    lastDebounceTime = millis();
-  }
-  if ((millis() - lastDebounceTime) > debounceDelay) {
-    if (reading != buttonState) {
-      buttonState = reading;
-      if (buttonState == HIGH) {
-        ledState = !ledState;
-      }
-    }
-  }
-  digitalWrite(ledPin, ledState);
-  lastButtonState = reading;
   ///////////초음파 센서를 통한 거리측정///////////
   for (int i = 0; i < 10; i++) {
+    delay(1);
+    change();
+    delay(1);
     digitalWrite(trigPin1, LOW);
     delayMicroseconds(trigoffdelay);
     digitalWrite(trigPin1, HIGH);
@@ -69,6 +58,8 @@ void loop()
     delayMicroseconds(trigondelay);
     digitalWrite(trigPin2, LOW);
     duration[1] = pulseIn(echoPin2, HIGH);
+    digitalWrite(ledPin, ledState);
+    lastButtonState = reading;
     // 밑에 2개더 추가분 소스
     digitalWrite(trigPin3, LOW);
     delayMicroseconds(trigoffdelay);
@@ -88,9 +79,11 @@ void loop()
     }
 
     //Serial.println(distance[0]);
+    //Serial.println(distance[1]);
+    //Serial.println(distance[2]);
+    //Serial.println(distance[3]);
     /////////////센싱된 값들의 안정화_ 불안정한 값이 입력될경우 초기화///////////
     delay(1);
-
     for (int a = 0; a < 4; a++) {
       if (distance[a] >= limit) {
         i = -1;
@@ -100,9 +93,7 @@ void loop()
         continue;
       }
     }
-
     delay(1);
-
     for (int a = 0; a < 4; a++) {
       sum[a] = sum[a] + distance[a];
     }
@@ -113,11 +104,16 @@ void loop()
   for (int a = 0; a < 4; a++) {
     avr[a] = (sum[a] / 10);
   }
+
+  Serial.println(avr[0]);
+  Serial.println(avr[1]);
+  Serial.println(avr[2]);
+  Serial.println(avr[3]);
   /////////////LED가 켜져있을 경우_평균이 초기값 변수에 입력////////////////
-  if (ledState == LOW)
+  if (ledState == HIGH)
     start = avr[0];//초기값은 하나로 측정해서 변수하나에 넣어도 충분(일렬로 나열되어있기때문에)
   ///////////LED가 꺼져있을 경우_평균이 비교값 변수에 입력////////////////
-  else if (ledState == HIGH) {
+  else if (ledState == LOW) {
     for (int a = 0; a < 4; a++) {
       check[a] = avr[a];
     }
@@ -131,3 +127,18 @@ void loop()
   }
 }
 
+void change() {
+  //////////////버튼 스위치의 토글스위치화//////////
+  reading = digitalRead(buttonPin);
+  if (reading != lastButtonState) {
+    lastDebounceTime = millis();
+  }
+  if ((millis() - lastDebounceTime) > debounceDelay) {
+    if (reading != buttonState) {
+      buttonState = reading;
+      if (buttonState == HIGH) {
+        ledState = !ledState;
+      }
+    }
+  }
+}
