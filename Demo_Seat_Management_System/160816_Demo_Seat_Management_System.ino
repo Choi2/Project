@@ -9,10 +9,12 @@
 SoftwareSerial dbgSerial(3, 2); // RX, TX 3번,2번핀 
 ///////////////////////////////////////////  
 
+#define pinNumber 8
 #define trigPin1 9
 #define trigPin2 11  
 #define echoPin1 10
 #define echoPin2 12  
+
 
 #define count 2 // the number of sensers  
 #define trigoffdelay 200000
@@ -111,6 +113,7 @@ void setup(void)
 
   pinMode(echoPin1, INPUT);
   pinMode(echoPin2, INPUT);
+  pinMode(pinNumber, OUTPUT);               //출력으로 쓸것이라 정한다. 
 
 }    
       
@@ -120,7 +123,7 @@ void print_result()
   int person;
   long start = 0, check[count] = {0};
   long duration[count] = {0}, distance[count] = {0}, sum[count] = {0}, avr[count] = {0};
-
+  long ch = 0;
   //// the looping for average and filtering for strange value.
 
   for (int i = 0; i < 10; i++) {
@@ -186,7 +189,24 @@ void print_result()
     Serial.println(avr[0]);
     Serial.print("avr[1] = ");
     Serial.println(avr[1]);
- 
+
+
+
+    if(avr[0] <= 150 && avr[1] <= 150) //사람이 오는경우
+    {
+           digitalWrite(pinNumber, HIGH);
+           ch = 1;
+    }
+     else //사람이 없는 경우
+     {
+           digitalWrite(pinNumber, LOW);
+           ch = 0;
+     }
+
+    Serial.print("people exist?? : ");
+    Serial.println(ch);
+         
+      
      String cmd = "AT+CIPSTART=\"TCP\",\"";  
      cmd += DST_IP;  
      cmd += "\",80";  
@@ -200,12 +220,13 @@ void print_result()
      
   
     char test[20];  
-    String temp(floatToString(test,avr[0], 2, 0));  
+    String temp(floatToString(test,ch, 2, 0));  
       
-     cmd = "GET /index.php?avr="+temp+"\n\r";  
+     cmd = "GET /index.php?avr="+ temp +"\n\r";  
      dbgSerial.print("AT+CIPSEND=");  
      dbgSerial.println(cmd.length());  
           
+
        
      Serial.println(cmd);  
        
