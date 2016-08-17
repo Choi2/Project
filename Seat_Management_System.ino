@@ -22,7 +22,7 @@ int reading = 0;
 
 void setup()
 {
-  Serial.begin(9600);
+  //Serial.begin(9600);
   pinMode(buttonPin, INPUT);
   pinMode(ledPin, OUTPUT);
   digitalWrite(ledPin, ledState);
@@ -58,8 +58,6 @@ void loop()
     delayMicroseconds(trigondelay);
     digitalWrite(trigPin2, LOW);
     duration[1] = pulseIn(echoPin2, HIGH);
-    digitalWrite(ledPin, ledState);
-    lastButtonState = reading;
     // 밑에 2개더 추가분 소스
     digitalWrite(trigPin3, LOW);
     delayMicroseconds(trigoffdelay);
@@ -104,11 +102,13 @@ void loop()
   for (int a = 0; a < 4; a++) {
     avr[a] = (sum[a] / 10);
   }
-
+/*
+  Serial.print("avr[0] = ");
   Serial.println(avr[0]);
   Serial.println(avr[1]);
   Serial.println(avr[2]);
   Serial.println(avr[3]);
+  */
   /////////////LED가 켜져있을 경우_평균이 초기값 변수에 입력////////////////
   if (ledState == HIGH)
     start = avr[0];//초기값은 하나로 측정해서 변수하나에 넣어도 충분(일렬로 나열되어있기때문에)
@@ -141,4 +141,6 @@ void change() {
       }
     }
   }
+  digitalWrite(ledPin, ledState);
+  lastButtonState = reading;
 }
