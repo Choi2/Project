@@ -20,8 +20,8 @@ int ledState2 = LOW;//LED초기상태 : ON
 int buttonState1, buttonState2;
 int lastButtonState1 = LOW;
 int lastButtonState2 = LOW;
-long lastDebounceTime[2] = 0;
-long debounceDelay[2] = 50;
+long lastDebounceTime[2] = {0, 0};
+long debounceDelay[2] = {50, 50};
 
 void setup()
 {
