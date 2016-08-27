@@ -19,10 +19,12 @@ int lastButtonState = LOW;
 long lastDebounceTime = 0;
 long debounceDelay = 50;
 int reading = 0;
+int person;//사람 유무 판별 변수
+long start, check[4];//초기값(기준값) 변수와 비교값 변수
 
 void setup()
 {
-  //Serial.begin(9600);
+  Serial.begin(9600);
   pinMode(buttonPin, INPUT);
   pinMode(ledPin, OUTPUT);
   digitalWrite(ledPin, ledState);
@@ -38,8 +40,6 @@ void setup()
 
 void loop()
 {
-  int person;//사람 유무 판별 변수
-  long start = 0, check[4] = {0};//초기값(기준값) 변수와 비교값 변수
   long duration[4] = {0}, distance[4] = {0}, sum[4] = {0}, avr[4] = {0};
   ///////////초음파 센서를 통한 거리측정///////////
   for (int i = 0; i < 10; i++) {
@@ -102,28 +102,37 @@ void loop()
   for (int a = 0; a < 4; a++) {
     avr[a] = (sum[a] / 10);
   }
-/*
-  Serial.print("avr[0] = ");
-  Serial.println(avr[0]);
-  Serial.println(avr[1]);
-  Serial.println(avr[2]);
-  Serial.println(avr[3]);
+  /*
+    Serial.print("avr[0] = ");
+    Serial.println(avr[0]);
+    Serial.println(avr[1]);
+    Serial.println(avr[2]);
+    Serial.println(avr[3]);
   */
   /////////////LED가 켜져있을 경우_평균이 초기값 변수에 입력////////////////
-  if (ledState == HIGH)
+  if (ledState == HIGH) {
     start = avr[0];//초기값은 하나로 측정해서 변수하나에 넣어도 충분(일렬로 나열되어있기때문에)
+    Serial.print("start = ");
+    Serial.println(start);
+  }
   ///////////LED가 꺼져있을 경우_평균이 비교값 변수에 입력////////////////
   else if (ledState == LOW) {
     for (int a = 0; a < 4; a++) {
       check[a] = avr[a];
     }
-    /////////////비교값이 초기값 범위(오차포함)안에 있을경우 사람이 있는걸로 판별/////////////////
-    if (check[0] <= (start - error) || check[1] <= (start - error) || check[2] <= (start - error) || check[3] <= (start - error) ) {
-      person = 1; //사람 유
-    }
-    else {
-      person = 0; //사람 무
-    }
+    Serial.print("check[0] = ");
+    Serial.println(check[0]);
+  }
+  /////////////비교값이 초기값 범위(오차포함)안에 있을경우 사람이 있는걸로 판별/////////////////
+  if ((check[0] <= (start - error)) || (check[1] <= (start - error)) || (check[2] <= (start - error)) || (check[3] <= (start - error)) ) {
+    person = 1; //사람 유
+    Serial.print("person = ");
+    Serial.println(person);
+  }
+  else {
+    person = 0; //사람 무
+    Serial.print("person = ");
+    Serial.println(person);
   }
 }
 
