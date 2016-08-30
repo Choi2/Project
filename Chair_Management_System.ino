@@ -95,10 +95,7 @@ char * floatToString(char * outstr, double val, byte precision, byte widthp) {
 
 void setup(void)
 {
-  //시리얼 포트 초기화
   Serial.begin(9600);
-
-  /////////////////////////////////////////////////////////////////////////
   Serial.setTimeout(5000);
   dbgSerial.begin(9600);
   Serial.println("ESP8266 connect");
@@ -112,19 +109,22 @@ void setup(void)
       break;
     }
   }
-  /*
-    if (!connected) {
-      while (1);
-    }
-  */
-  delay(5000);
-
+  /*if (!connected) {
+    while (1);
+    }*/
+  delay(1000);
   dbgSerial.println("AT+CIPMUX=0");
 
   pinMode(trigPin1, OUTPUT);
-  pinMode(trigPin2, OUTPUT);
   pinMode(echoPin1, INPUT);
+  pinMode(trigPin2, OUTPUT);
   pinMode(echoPin2, INPUT);
+  /*
+    pinMode(trigPin3, OUTPUT);
+    pinMode(echoPin3, INPUT);
+    pinMode(trigPin4, OUTPUT);
+    pinMode(echoPin4, INPUT);
+  */
 }
 
 
@@ -181,7 +181,6 @@ void print_result()
     for (int a = 0; a < count; a++)
       sum[a] = sum[a] + distance[a];
   }
-  //Serial.println(sum[0]);
 
   for (int a = 0; a < count; a++) //Average
     avr[a] = (sum[a] / lotation);
@@ -195,7 +194,7 @@ void print_result()
 
   reading_start = digitalRead(startPin);
   reading_chair = digitalRead(chairPin);
-  ///////초기화MODE_책상과_의자사이_거리//////////////////////
+  /*초기화MODE_책상과_의자사이_거리*/
   if (reading_start == HIGH && reading_chair == HIGH) {
     start[0] = avr[0]; //의자에 대한 초기값
     debug = 1;
@@ -203,7 +202,7 @@ void print_result()
     Serial.print("chair_start[0] = ");
     Serial.println(start[0]);
   }
-  /////////////초기화MODE_책상과_바닥사이_거리////////////////
+  /*초기화MODE_책상과_바닥사이_거리*/
   else if ((reading_start == HIGH && reading_chair == LOW)) {
     start[1] = avr[0]; //바닥에 대한 초기값
     debug = 2;
@@ -211,7 +210,7 @@ void print_result()
     Serial.println(start[1]);
     delay(300);
   }
-  ////////////초기화종료MODE//////////////////////////
+  /*초기화종료MODE*/
   else if (reading_start == LOW && reading_chair == LOW) {
     for (int a = 0; a < count; a++) {
       check[a] = avr[a];
@@ -314,7 +313,7 @@ void loop(void)
 
 boolean connectWiFi()
 {
-  //dbgSerial.println("AT+CWMODE=1");
+  dbgSerial.println("AT+CWMODE=1");
 
   String cmd = "AT+CWJAP=\"";
   cmd += SSID;
@@ -323,7 +322,7 @@ boolean connectWiFi()
   cmd += "\"";
   dbgSerial.println(cmd);
   Serial.println(cmd);
-  delay(3000);
+  delay(1000);
 
   if (dbgSerial.find("OK"))
   {

@@ -88,9 +88,7 @@ char * floatToString(char * outstr, double val, byte precision, byte widthp) {
 
 void setup(void)
 {
-  //시리얼 포트 초기화
   Serial.begin(9600);
-  /////////////////////////////////////////////////////////////////////////
   Serial.setTimeout(5000);
   dbgSerial.begin(9600);
   Serial.println("ESP8266 connect");
@@ -104,16 +102,22 @@ void setup(void)
       break;
     }
   }
-  /*
-    if (!connected) {
-      while (1);
-    }
-  */
-  delay(5000);
+  /*if (!connected) {
+    while (1);
+    }*/
+  delay(1000);
   dbgSerial.println("AT+CIPMUX=0");
 
   pinMode(trigPin1, OUTPUT);
   pinMode(echoPin1, INPUT);
+  /*
+    pinMode(trigPin2, OUTPUT);
+    pinMode(echoPin2, INPUT);
+    pinMode(trigPin3, OUTPUT);
+    pinMode(echoPin3, INPUT);
+    pinMode(trigPin4, OUTPUT);
+    pinMode(echoPin4, INPUT);
+  */
   pinMode(buttonPin, INPUT);
   pinMode(ledPin, OUTPUT);               //출력으로 쓸것이라 정한다.
   digitalWrite(ledPin, ledState);
@@ -157,7 +161,7 @@ void print_result() {
       distance[a] = duration[a] * 17 / 1000;
 
     delay(1);
-    
+
     for (int a = 0; a < count; a++) {
       if (distance[a] >= limit) {
         k = -1;
@@ -173,23 +177,22 @@ void print_result() {
     for (int a = 0; a < count; a++)
       sum[a] = sum[a] + distance[a];
   }
-  //Serial.println(sum[0]);
 
   for (int a = 0; a < count; a++) //Average
     avr[a] = (sum[a] / rotation);
 
   Serial.print("avr[0] = ");
   Serial.println(avr[0]);
-  
+
   eeprom();
 
-  /////////////LED가 켜져있을 경우_평균이 초기값 변수에 입력////////////////
+  /*LED가 켜져있을 경우_평균이 초기값 변수에 입력*/
   if (ledState == HIGH) {
     start = avr[0];//초기값은 하나로 측정해서 변수하나에 넣어도 충분(일렬로 나열되어있기때문에)
     Serial.print("start = ");
     Serial.println(start);
   }
-  ///////////LED가 꺼져있을 경우_평균이 비교값 변수에 입력////////////////
+  /*LED가 꺼져있을 경우_평균이 비교값 변수에 입력*/
   else if (ledState == LOW) {
     for (int a = 0; a < count; a++) {
       check[a] = avr[a];
@@ -218,8 +221,6 @@ void print_result() {
       person = 0; //사람 무
     }
   }
-  Serial.print("person = ");
-  Serial.println(person);
   /*사람 유무판별 결과를 서버로 전송*/
   Serial.print("people exist?? : ");
   Serial.println(person);
@@ -276,7 +277,7 @@ void loop(void)
 
 boolean connectWiFi()
 {
-  //dbgSerial.println("AT+CWMODE=1");
+  dbgSerial.println("AT+CWMODE=1");
 
   String cmd = "AT+CWJAP=\"";
   cmd += SSID;
@@ -285,7 +286,7 @@ boolean connectWiFi()
   cmd += "\"";
   dbgSerial.println(cmd);
   Serial.println(cmd);
-  delay(3000);
+  delay(1000);
 
   if (dbgSerial.find("OK"))
   {
@@ -300,7 +301,7 @@ boolean connectWiFi()
 }
 
 void change() {
-  //////////////버튼 스위치의 토글스위치화//////////
+  /*버튼 스위치의 토글스위치화*/
   delay(1);
   ledState = !ledState;
   delay(1);
