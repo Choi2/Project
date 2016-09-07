@@ -278,7 +278,7 @@ void print_result()
   char test[20];
   String temp(floatToString(test, person, 2, 0));
 
-  cmd = "GET /index.php?table1=" + temp + "\n\r";
+  cmd = "GET /index.php?soongsil_chair_1=" + temp + "\n\r";
   dbgSerial.print("AT+CIPSEND=");
   dbgSerial.println(cmd.length());
 
@@ -352,3 +352,4 @@ void eeprom() {
     cnt = 1;
   delay(1);
 }
+
