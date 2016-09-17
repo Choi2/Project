@@ -2,13 +2,11 @@
 #include <EEPROM.h>
 ///////////////////////////////////////////
 #include <SoftwareSerial.h>
-
-#define SSID "PLUS2"  //공유기 SSID
-#define PASS "12345678"   //공유기 비번
+#define SSID "SEE_2"  //공유기 SSID
+#define PASS "see05524"   //공유기 비번
 #define DST_IP "175.126.112.111"   //MYSQL 서버 주소 
 SoftwareSerial dbgSerial(3, 2); // RX, TX 3번,2번핀
 ///////////////////////////////////////////
-
 #define trigPin1 7
 #define trigPin2 9
 #define trigPin3 11
@@ -19,12 +17,12 @@ SoftwareSerial dbgSerial(3, 2); // RX, TX 3번,2번핀
 #define echoPin4 12
 #define startPin 4//HIGH인 경우 바닥과 책상거리 측정
 #define chairPin 5//HIGH인 경우 의자와 책상거리 측정
-#define error 5//허용오차범위(cm)
+#define error 7//허용오차범위(cm)
 #define limit 300//센싱 한계 표시(cm)
 #define trigoffdelay 20000//trig off시간
 #define trigondelay 10000//tring on 시간
 #define wdPin 0//watchdog timer pin
-#define count 3 // the number of sensers  
+#define count 4 // the number of sensers  
 #define lotation 15//정확도 및 평균을 위한 센싱횟수
 int reading_start;
 int reading_chair;
@@ -99,8 +97,6 @@ void setup(void)
 {
   //시리얼 포트 초기화
   Serial.begin(9600);
-
-  /////////////////////////////////////////////////////////////////////////
   Serial.setTimeout(5000);
   dbgSerial.begin(9600);
   Serial.println("ESP8266 connect");
@@ -125,13 +121,15 @@ void setup(void)
   digitalWrite(wdPin, HIGH);
   pinMode(trigPin1, OUTPUT);
   pinMode(trigPin2, OUTPUT);
+  pinMode(trigPin3, OUTPUT);
   pinMode(trigPin4, OUTPUT);
   pinMode(echoPin1, INPUT);
   pinMode(echoPin2, INPUT);
+  pinMode(echoPin3, INPUT);
   pinMode(echoPin4, INPUT);
-  while(reading_start == HIGH || reading_chair == HIGH){
+  while (reading_start == HIGH || reading_chair == HIGH) {
     delay(1000);
-  Serial.print("delay");
+    Serial.print("delay");
   }
 }
 
@@ -154,19 +152,25 @@ void print_result()
     delayMicroseconds(trigondelay);
     digitalWrite(trigPin2, LOW);
     duration[1] = pulseIn(echoPin2, HIGH);
+    digitalWrite(trigPin3, LOW);
+    delayMicroseconds(trigoffdelay);
+    digitalWrite(trigPin3, HIGH);
+    delayMicroseconds(trigondelay);
+    digitalWrite(trigPin3, LOW);
+    duration[2] = pulseIn(echoPin4, HIGH);
     digitalWrite(trigPin4, LOW);
     delayMicroseconds(trigoffdelay);
     digitalWrite(trigPin4, HIGH);
     delayMicroseconds(trigondelay);
     digitalWrite(trigPin4, LOW);
-    duration[2] = pulseIn(echoPin4, HIGH);
-/*
-    Serial.print("distance[0] = ");
-    Serial.println(distance[0]);
-    Serial.println(distance[1]);
-    Serial.println(distance[2]);
-    Serial.println(distance[3]);
-*/
+    duration[3] = pulseIn(echoPin4, HIGH);
+    /*
+        Serial.print("distance[0] = ");
+        Serial.println(distance[0]);
+        Serial.println(distance[1]);
+        Serial.println(distance[2]);
+        Serial.println(distance[3]);
+    */
     if (wdcnt == 30) {
       watchdog();
     }
@@ -196,21 +200,13 @@ void print_result()
 
   for (int a = 0; a < count; a++) //Average
     avr[a] = (sum[a] / lotation);
-
-  Serial.print("avr[0] = ");
-  Serial.println(avr[0]);
-  Serial.print("avr[1] = ");
-  Serial.println(avr[1]);
-  Serial.print("avr[2] = ");
-  Serial.println(avr[2]);
-
   eeprom();
 
   Serial.print("start[0] = ");
   Serial.println(start[0]);
   Serial.print("start[1] = ");
   Serial.println(start[1]);
-  
+
   reading_start = digitalRead(startPin);
   reading_chair = digitalRead(chairPin);
   ///////초기화MODE_책상과_의자사이_거리//////////////////////
@@ -241,6 +237,8 @@ void print_result()
     Serial.println(check[1]);
     Serial.print("check[2] = ");
     Serial.println(check[2]);
+    Serial.print("check[3] = ");
+    Serial.println(check[3]);
     delay(300);
   }
   for (int a = 0; a < count; a++) {
@@ -248,7 +246,7 @@ void print_result()
       person = 1; //사람 유
       break;
     }
-    else if (check[a] <= (start[0] - error)) {
+    else if ((check[a] <= (start[0] - error)) && (check[a] != 0)) {
       person = 1;
       break;
     }
@@ -334,16 +332,30 @@ boolean connectWiFi()
 }
 
 void eeprom() {
+  int division[2] = {0};
+  int remain[2] = {0};
   if (cnt == 0) {
     start[0] = EEPROM.read(0) * 10;
     start[1] = EEPROM.read(1) * 10;
     start_nonvolatile[0] = start[0];
     start_nonvolatile[1] = start[1];
   }
-  if (start[0] != start_nonvolatile[0])
-    EEPROM.write(0, start[0] / 10);
-  if (start[1] != start_nonvolatile[1])
-    EEPROM.write(1, start[1] / 10);
+  remain[0] = start[0] % 10;
+  remain[1] = start[0] % 10;
+  division[0] = start[0] / 10;
+  division[1] = start[1] / 10;
+  if (start[0] != start_nonvolatile[0]) {
+    if (remain[0] >= 5)
+      EEPROM.write(0, division[0] + 1);
+    else
+      EEPROM.write(0, division[0]);
+  }
+  if (start[1] != start_nonvolatile[1]) {
+    if (remain[1] >= 5)
+      EEPROM.write(1, division[1] + 1);
+    else
+      EEPROM.write(1, division[1]);
+  }
   cnt++;
   if (cnt == 4)
     cnt = 1;

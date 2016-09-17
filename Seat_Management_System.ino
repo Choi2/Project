@@ -2,7 +2,6 @@
 #include <EEPROM.h>
 ///////////////////////////////////////////
 #include <SoftwareSerial.h>
-
 #define SSID "PLUS2"  //공유기 SSID
 #define PASS "12345678"   //공유기 비번
 #define DST_IP "175.126.112.111"   //MYSQL 서버 주소 
@@ -18,6 +17,7 @@ SoftwareSerial dbgSerial(5, 4); // RX, TX 5번,4번핀
 #define echoPin4 12
 #define buttonPin 2
 #define ledPin 3
+#define wdPin 0//watchdog timer pin
 #define count 4 // the number of sensers  
 #define trigoffdelay 2000000
 #define trigondelay 1000000
@@ -27,6 +27,7 @@ SoftwareSerial dbgSerial(5, 4); // RX, TX 5번,4번핀
 volatile int ledState = HIGH;//LED초기상태 : ON
 int person;//사람 유무 판별 변수
 int cnt;//for EEPROM
+int wdcnt;//for watchdog timer
 long start_nonvolatile;//for EEPROM
 long start, check[count];//초기값(기준값) 변수와 비교값 변수
 
@@ -107,7 +108,8 @@ void setup(void)
     }*/
   delay(1000);
   dbgSerial.println("AT+CIPMUX=0");
-
+  pinMode(wdPin, OUTPUT);
+  digitalWrite(wdPin, LOW);
   pinMode(trigPin1, OUTPUT);
   pinMode(echoPin1, INPUT);
   pinMode(trigPin2, OUTPUT);
@@ -156,6 +158,10 @@ void print_result() {
     digitalWrite(trigPin4, LOW);
     duration[3] = pulseIn(echoPin4, HIGH);
 
+    if (wdcnt == 30) {
+      watchdog();
+    }
+
     for (int a = 0; a < count; a++)
       distance[a] = duration[a] * 17 / 1000;
 
@@ -176,12 +182,10 @@ void print_result() {
     for (int a = 0; a < count; a++)
       sum[a] = sum[a] + distance[a];
   }
+  wdcnt = 0;
 
   for (int a = 0; a < count; a++) //Average
     avr[a] = (sum[a] / rotation);
-
-  Serial.print("avr[0] = ");
-  Serial.println(avr[0]);
 
   eeprom();
 
@@ -201,18 +205,24 @@ void print_result() {
     }
     Serial.print("check[0] = ");
     Serial.println(check[0]);
+    Serial.print("check[1] = ");
+    Serial.println(check[1]);
+    Serial.print("check[2] = ");
+    Serial.println(check[2]);
+    Serial.print("check[3] = ");
+    Serial.println(check[3]);
   }
   /////////////비교값이 초기값 범위(오차포함)안에 있을경우 사람이 있는걸로 판별/////////////////
-  if ((check[0] <= (start - error)) || (check[1] <= (start - error)) || (check[2] <= (start - error)) || (check[3] <= (start - error)) ) {
-    person = 1; //사람 유
-    Serial.print("person = ");
-    Serial.println(person);
+  for (int a = 0; a < count; a++) {
+    if ((check[a] <= (start - error)) && (check[a] != 0)) {
+      person = 1;
+      break;
+    }
+    else
+      person = 0;
   }
-  else {
-    person = 0; //사람 무
-    Serial.print("person = ");
-    Serial.println(person);
-  }
+  Serial.print("person = ");
+  Serial.println(person);
   /*사람 유무판별 결과를 서버로 전송*/
   delay(1);
   String cmd = "AT+CIPSTART=\"TCP\",\"";
@@ -298,14 +308,28 @@ void change() {
 }
 
 void eeprom() {
+  int division = 0;
+  int remain = 0;
   if (cnt == 0) {
     start = EEPROM.read(0) * 10;
     start_nonvolatile = start;
   }
-  if (start != start_nonvolatile)
-    EEPROM.write(0, start / 10);
+  remain = start % 10;
+  division = start / 10;
+  if (start != start_nonvolatile) {
+    if (remain >= 5)
+      EEPROM.write(0, division + 1);
+    else
+      EEPROM.write(0, division);
+  }
   cnt++;
   if (cnt == 4)
     cnt = 1;
   delay(1);
+}
+
+void watchdog() {
+  digitalWrite(wdPin, HIGH);
+  delay(500);
+  digitalWrite(wdPin, LOW);
 }
