@@ -3,8 +3,8 @@
 ///////////////////////////////////////////
 #include <SoftwareSerial.h>
 
-#define SSID "SEE_2"  //공유기 SSID
-#define PASS "see05524"   //공유기 비번
+#define SSID "PLUS2"  //공유기 SSID
+#define PASS "12345678"   //공유기 비번
 #define DST_IP "175.126.112.111"   //MYSQL 서버 주소 
 SoftwareSerial dbgSerial(5, 4); // RX, TX 5번,4번핀
 ///////////////////////////////////////////
@@ -18,7 +18,7 @@ SoftwareSerial dbgSerial(5, 4); // RX, TX 5번,4번핀
 #define echoPin4 12
 #define buttonPin 2
 #define ledPin 3
-#define count 1 // the number of sensers  
+#define count 4 // the number of sensers  
 #define trigoffdelay 2000000
 #define trigondelay 1000000
 #define error 10
@@ -110,16 +110,17 @@ void setup(void)
 
   pinMode(trigPin1, OUTPUT);
   pinMode(echoPin1, INPUT);
-  /*
-    pinMode(trigPin2, OUTPUT);
-    pinMode(echoPin2, INPUT);
-    pinMode(trigPin3, OUTPUT);
-    pinMode(echoPin3, INPUT);
-    pinMode(trigPin4, OUTPUT);
-    pinMode(echoPin4, INPUT);
-  */
+  pinMode(trigPin2, OUTPUT);
+  pinMode(echoPin2, INPUT);
+  pinMode(trigPin3, OUTPUT);
+  pinMode(echoPin3, INPUT);
+  pinMode(trigPin4, OUTPUT);
+  pinMode(echoPin4, INPUT);
   pinMode(buttonPin, INPUT);
   pinMode(ledPin, OUTPUT);               //출력으로 쓸것이라 정한다.
+  digitalWrite(ledPin, ledState);
+  delay(1000);
+  ledState = !ledState;
   digitalWrite(ledPin, ledState);
   attachInterrupt(0, change, FALLING);
 }
@@ -136,26 +137,24 @@ void print_result() {
     delayMicroseconds(trigondelay);
     digitalWrite(trigPin1, LOW);
     duration[0] = pulseIn(echoPin1, HIGH);
-    /*
-      digitalWrite(trigPin2, LOW);
-      delayMicroseconds(trigoffdelay);
-      digitalWrite(trigPin2, HIGH);
-      delayMicroseconds(trigondelay);
-      digitalWrite(trigPin2, LOW);
-      duration[1] = pulseIn(echoPin2, HIGH);
-      digitalWrite(trigPin3, LOW);
-      delayMicroseconds(trigoffdelay);
-      digitalWrite(trigPin3, HIGH);
-      delayMicroseconds(trigondelay);
-      digitalWrite(trigPin3, LOW);
-      duration[2] = pulseIn(echoPin3, HIGH);
-      digitalWrite(trigPin4, LOW);
-      delayMicroseconds(trigoffdelay);
-      digitalWrite(trigPin4, HIGH);
-      delayMicroseconds(trigondelay);
-      digitalWrite(trigPin4, LOW);
-      duration[3] = pulseIn(echoPin4, HIGH);
-    */
+    digitalWrite(trigPin2, LOW);
+    delayMicroseconds(trigoffdelay);
+    digitalWrite(trigPin2, HIGH);
+    delayMicroseconds(trigondelay);
+    digitalWrite(trigPin2, LOW);
+    duration[1] = pulseIn(echoPin2, HIGH);
+    digitalWrite(trigPin3, LOW);
+    delayMicroseconds(trigoffdelay);
+    digitalWrite(trigPin3, HIGH);
+    delayMicroseconds(trigondelay);
+    digitalWrite(trigPin3, LOW);
+    duration[2] = pulseIn(echoPin3, HIGH);
+    digitalWrite(trigPin4, LOW);
+    delayMicroseconds(trigoffdelay);
+    digitalWrite(trigPin4, HIGH);
+    delayMicroseconds(trigondelay);
+    digitalWrite(trigPin4, LOW);
+    duration[3] = pulseIn(echoPin4, HIGH);
 
     for (int a = 0; a < count; a++)
       distance[a] = duration[a] * 17 / 1000;
@@ -186,6 +185,9 @@ void print_result() {
 
   eeprom();
 
+  Serial.print("start = ");
+  Serial.println(start);
+
   /*LED가 켜져있을 경우_평균이 초기값 변수에 입력*/
   if (ledState == HIGH) {
     start = avr[0];//초기값은 하나로 측정해서 변수하나에 넣어도 충분(일렬로 나열되어있기때문에)
@@ -200,31 +202,18 @@ void print_result() {
     Serial.print("check[0] = ");
     Serial.println(check[0]);
   }
-  /* 센서가 4개 되었을때 주석을 제거 할 것
-    /////////////비교값이 초기값 범위(오차포함)안에 있을경우 사람이 있는걸로 판별/////////////////
-    if ((check[0] <= (start - error)) || (check[1] <= (start - error)) || (check[2] <= (start - error)) || (check[3] <= (start - error)) ) {
+  /////////////비교값이 초기값 범위(오차포함)안에 있을경우 사람이 있는걸로 판별/////////////////
+  if ((check[0] <= (start - error)) || (check[1] <= (start - error)) || (check[2] <= (start - error)) || (check[3] <= (start - error)) ) {
     person = 1; //사람 유
     Serial.print("person = ");
     Serial.println(person);
-    }
-    else {
+  }
+  else {
     person = 0; //사람 무
     Serial.print("person = ");
     Serial.println(person);
-    }*/
-  for (int a = 0; a < count; a++) {
-    if ((check[a] <= (start - error))) {
-      person = 1; //사람 유
-      break;
-    }
-    else {
-      person = 0; //사람 무
-    }
   }
   /*사람 유무판별 결과를 서버로 전송*/
-  Serial.print("people exist?? : ");
-  Serial.println(person);
-
   delay(1);
   String cmd = "AT+CIPSTART=\"TCP\",\"";
   cmd += DST_IP;

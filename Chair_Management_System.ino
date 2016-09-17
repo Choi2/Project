@@ -3,8 +3,8 @@
 ///////////////////////////////////////////
 #include <SoftwareSerial.h>
 
-#define SSID "SEE_2"  //공유기 SSID
-#define PASS "see05524"   //공유기 비번
+#define SSID "PLUS2"  //공유기 SSID
+#define PASS "12345678"   //공유기 비번
 #define DST_IP "175.126.112.111"   //MYSQL 서버 주소 
 SoftwareSerial dbgSerial(3, 2); // RX, TX 3번,2번핀
 ///////////////////////////////////////////
@@ -17,22 +17,24 @@ SoftwareSerial dbgSerial(3, 2); // RX, TX 3번,2번핀
 #define echoPin2 8
 #define echoPin3 10
 #define echoPin4 12
-#define startPin 4
-#define chairPin 5
-#define error 10//허용오차범위(cm)
+#define startPin 4//HIGH인 경우 바닥과 책상거리 측정
+#define chairPin 5//HIGH인 경우 의자와 책상거리 측정
+#define error 5//허용오차범위(cm)
 #define limit 300//센싱 한계 표시(cm)
 #define trigoffdelay 20000//trig off시간
 #define trigondelay 10000//tring on 시간
-#define count 2 // the number of sensers  
-#define lotation 10//정확도 및 평균을 위한 센싱횟수
+#define wdPin 0//watchdog timer pin
+#define count 3 // the number of sensers  
+#define lotation 15//정확도 및 평균을 위한 센싱횟수
 int reading_start;
 int reading_chair;
 int debug = 0;//debug전용
 int laststart = LOW;
 int lastchair = LOW;
 int lastDebounceTime[2] = {0, 0};
-int cnt;
-int person;
+int cnt;//for EEPROM
+int wdcnt;//for watchdog timer
+int person;//사람 유무 판별 변수
 long start[2], check[count];
 long start_nonvolatile[2];
 
@@ -95,7 +97,10 @@ char * floatToString(char * outstr, double val, byte precision, byte widthp) {
 
 void setup(void)
 {
+  //시리얼 포트 초기화
   Serial.begin(9600);
+
+  /////////////////////////////////////////////////////////////////////////
   Serial.setTimeout(5000);
   dbgSerial.begin(9600);
   Serial.println("ESP8266 connect");
@@ -109,22 +114,25 @@ void setup(void)
       break;
     }
   }
-  /*if (!connected) {
-    while (1);
-    }*/
-  delay(1000);
-  dbgSerial.println("AT+CIPMUX=0");
-
-  pinMode(trigPin1, OUTPUT);
-  pinMode(echoPin1, INPUT);
-  pinMode(trigPin2, OUTPUT);
-  pinMode(echoPin2, INPUT);
   /*
-    pinMode(trigPin3, OUTPUT);
-    pinMode(echoPin3, INPUT);
-    pinMode(trigPin4, OUTPUT);
-    pinMode(echoPin4, INPUT);
+    if (!connected) {
+      while (1);
+    }
   */
+  delay(5000);
+  dbgSerial.println("AT+CIPMUX=0");
+  pinMode(wdPin, OUTPUT);
+  digitalWrite(wdPin, HIGH);
+  pinMode(trigPin1, OUTPUT);
+  pinMode(trigPin2, OUTPUT);
+  pinMode(trigPin4, OUTPUT);
+  pinMode(echoPin1, INPUT);
+  pinMode(echoPin2, INPUT);
+  pinMode(echoPin4, INPUT);
+  while(reading_start == HIGH || reading_chair == HIGH){
+    delay(1000);
+  Serial.print("delay");
+  }
 }
 
 
@@ -133,7 +141,7 @@ void print_result()
   long duration[count] = {0}, distance[count] = {0}, sum[count] = {0}, avr[count] = {0};
   //// the looping for average and filtering for strange value.
 
-  for (int k = 0; k < lotation; k++) {
+  for (int k = 0; k < lotation; k++, wdcnt++) {
     digitalWrite(trigPin1, LOW);
     delayMicroseconds(trigoffdelay);
     digitalWrite(trigPin1, HIGH);
@@ -146,20 +154,22 @@ void print_result()
     delayMicroseconds(trigondelay);
     digitalWrite(trigPin2, LOW);
     duration[1] = pulseIn(echoPin2, HIGH);
-    /*
-      digitalWrite(trigPin3, LOW);
-      delayMicroseconds(trigoffdelay);
-      digitalWrite(trigPin3, HIGH);
-      delayMicroseconds(trigondelay);
-      digitalWrite(trigPin3, LOW);
-      duration[2] = pulseIn(echoPin3, HIGH);
-      digitalWrite(trigPin4, LOW);
-      delayMicroseconds(trigoffdelay);
-      digitalWrite(trigPin4, HIGH);
-      delayMicroseconds(trigondelay);
-      digitalWrite(trigPin4, LOW);
-      duration[3] = pulseIn(echoPin4, HIGH);
-    */
+    digitalWrite(trigPin4, LOW);
+    delayMicroseconds(trigoffdelay);
+    digitalWrite(trigPin4, HIGH);
+    delayMicroseconds(trigondelay);
+    digitalWrite(trigPin4, LOW);
+    duration[2] = pulseIn(echoPin4, HIGH);
+/*
+    Serial.print("distance[0] = ");
+    Serial.println(distance[0]);
+    Serial.println(distance[1]);
+    Serial.println(distance[2]);
+    Serial.println(distance[3]);
+*/
+    if (wdcnt == 30) {
+      watchdog();
+    }
 
     for (int a = 0; a < count; a++)
       distance[a] = duration[a] * 17 / 1000;
@@ -181,6 +191,8 @@ void print_result()
     for (int a = 0; a < count; a++)
       sum[a] = sum[a] + distance[a];
   }
+  //Serial.println(sum[0]);
+  wdcnt = 0;
 
   for (int a = 0; a < count; a++) //Average
     avr[a] = (sum[a] / lotation);
@@ -189,28 +201,35 @@ void print_result()
   Serial.println(avr[0]);
   Serial.print("avr[1] = ");
   Serial.println(avr[1]);
+  Serial.print("avr[2] = ");
+  Serial.println(avr[2]);
 
   eeprom();
 
+  Serial.print("start[0] = ");
+  Serial.println(start[0]);
+  Serial.print("start[1] = ");
+  Serial.println(start[1]);
+  
   reading_start = digitalRead(startPin);
   reading_chair = digitalRead(chairPin);
-  /*초기화MODE_책상과_의자사이_거리*/
-  if (reading_start == HIGH && reading_chair == HIGH) {
+  ///////초기화MODE_책상과_의자사이_거리//////////////////////
+  if (reading_start == LOW && reading_chair == HIGH) {
     start[0] = avr[0]; //의자에 대한 초기값
     debug = 1;
     delay(300);
     Serial.print("chair_start[0] = ");
     Serial.println(start[0]);
   }
-  /*초기화MODE_책상과_바닥사이_거리*/
-  else if ((reading_start == HIGH && reading_chair == LOW)) {
+  /////////////초기화MODE_책상과_바닥사이_거리////////////////
+  else if (reading_start == HIGH && reading_chair == LOW) {
     start[1] = avr[0]; //바닥에 대한 초기값
     debug = 2;
     Serial.print("floor_start[1] = ");
     Serial.println(start[1]);
     delay(300);
   }
-  /*초기화종료MODE*/
+  ////////////초기화종료MODE//////////////////////////
   else if (reading_start == LOW && reading_chair == LOW) {
     for (int a = 0; a < count; a++) {
       check[a] = avr[a];
@@ -218,32 +237,14 @@ void print_result()
     debug = 3;
     Serial.print("check[0] = ");
     Serial.println(check[0]);
+    Serial.print("check[1] = ");
+    Serial.println(check[1]);
+    Serial.print("check[2] = ");
+    Serial.println(check[2]);
     delay(300);
   }
-  /*센서 4개 설치시 주석지울것!
-    /////////////비교값이 초기값 범위(오차포함)안에 있을경우 사람이 있는걸로 판별/////////////////의자와 바닥사이, 의자와 책상사이//////////
-    if ((check[0] >= (start[0] + error) && check[0] <= (start[1] - error)) || (check[1] >= (start[0] + error) && check[1] <= (start[1] - error))) {
-      person = 1; //사람 유
-      Serial.print("person = ");
-      Serial.println(person);
-    }
-    else if ((check[2] >= (start[0] + error) && check[2] <= (start[1] - error)) || (check[3] >= (start[0] + error) && check[3] <= (start[1] - error))) {
-      person = 1;
-      Serial.print("person = ");
-      Serial.println(person);
-    }
-    else if (check[0] <= (start[0] - error) || check[1] <= (start[0] - error) || check[2] <= (start[0] - error) || check[3] <= (start[0] - error)) {
-      person = 1;
-      Serial.print("person = ");
-      Serial.println(person);
-    }
-    else {
-      person = 0; //사람 무
-      Serial.print("person = ");
-      Serial.println(person);
-    }*/
   for (int a = 0; a < count; a++) {
-    if ((check[a] >= (start[0] + error) && check[a] <= (start[1] - error))) {
+    if ((check[a] >= (start[0] + error)) && (check[a] <= (start[1] - error))) {
       person = 1; //사람 유
       break;
     }
@@ -257,10 +258,6 @@ void print_result()
   }
   Serial.print("person = ");
   Serial.println(person);
-
-  Serial.print("people exist?? : ");
-  Serial.println(person);
-
   delay(1);
   String cmd = "AT+CIPSTART=\"TCP\",\"";
   cmd += DST_IP;
@@ -322,7 +319,7 @@ boolean connectWiFi()
   cmd += "\"";
   dbgSerial.println(cmd);
   Serial.println(cmd);
-  delay(1000);
+  delay(3000);
 
   if (dbgSerial.find("OK"))
   {
@@ -353,3 +350,8 @@ void eeprom() {
   delay(1);
 }
 
+void watchdog() {
+  digitalWrite(wdPin, LOW);
+  delay(500);
+  digitalWrite(wdPin, HIGH);
+}
