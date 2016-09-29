@@ -1,0 +1,3 @@
+[submodule "SMS_WEB"]
+	path = SMS_WEB
+	url = https://github.com/febdy/SMS_WEB
